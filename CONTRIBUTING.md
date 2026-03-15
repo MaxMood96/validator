@@ -2,7 +2,7 @@
 
 The [Grant of license](CONTRIBUTING.md#grant-of-license) section at the end of this file has details about licensing code contributions to this project, and about "signing off" on code contributions. Please make sure to read it.
 
-## Questions or problems? [![Nu Html Checker chat room](https://goo.gl/1kHqwI)][2]
+## Questions or problems?
 
 Along with using the [project issue tracker][1] you can get help in real time in the [#whatwg chat room][2].
 
