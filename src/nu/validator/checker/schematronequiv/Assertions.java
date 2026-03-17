@@ -1087,6 +1087,8 @@ public class Assertions extends Checker {
 
         private boolean hasTabularRubyMarkup = false;
 
+        private boolean legendFound = false;
+
         private int consecutiveRbCount = 0;
 
         private Locator captionNestedInFigure;
@@ -1307,6 +1309,14 @@ public class Assertions extends Checker {
          */
         public void setHeadingFound() {
             this.headingFound = true;
+        }
+
+        public boolean hasLegend() {
+            return legendFound;
+        }
+
+        public void setLegendFound() {
+            this.legendFound = true;
         }
 
         /**
@@ -1969,6 +1979,12 @@ public class Assertions extends Checker {
             } else if ("dialog" == localName
                     || node.atts.getIndex("", "popover") > -1) {
                 hasAutofocus = false;
+            } else if ("optgroup" == localName
+                    && !node.hasLegend()
+                    && node.atts.getIndex("", "label") < 0) {
+                err("An “optgroup” element with no child"
+                        + " “legend” element must have a"
+                        + " “label” attribute.");
             } else if ("select" == localName && node.isOptionNeeded()) {
                 if (!node.hasOption()) {
                     err("A “select” element with a"
@@ -3074,6 +3090,11 @@ public class Assertions extends Checker {
                     && atts.getIndex("", "alt") > -1
                     && !"".equals(atts.getValue("", "alt"))) {
                 stack[currentHeadingPtr].setImgFound();
+            }
+
+            if ("legend" == localName
+                    && "optgroup".equals(parent.name)) {
+                parent.setLegendFound();
             }
 
             if ("option" == localName && !parent.hasOption()) {
@@ -4913,6 +4934,76 @@ public class Assertions extends Checker {
                                 + " not be used on any “summary”"
                                 + " element that is a summary for its parent"
                                 + " “details” element.");
+                    }
+                }
+            }
+            if ("button" == localName
+                    && "select".equals(parent.name)) {
+                boolean selectIsDropdown = true;
+                boolean selectHasMultiple = parent.atts.getIndex(
+                        "", "multiple") > -1;
+                if (parent.atts.getIndex("", "size") > -1) {
+                    String size = trimSpaces(
+                            parent.atts.getValue("", "size"));
+                    try {
+                        int sizeVal = Integer.parseInt(size);
+                        if (sizeVal > 1) {
+                            selectIsDropdown = false;
+                        }
+                    } catch (NumberFormatException e) {
+                    }
+                } else if (selectHasMultiple) {
+                    selectIsDropdown = false;
+                }
+                if (!selectIsDropdown) {
+                    err("A “button” element is only allowed"
+                            + " as a child of a “select”"
+                            + " element that is a drop-down box"
+                            + " (one without a “size”"
+                            + " attribute greater than 1 and without"
+                            + " a “multiple” attribute).");
+                } else {
+                    for (int i = 0; i < atts.getLength(); i++) {
+                        String attLocal = atts.getLocalName(i);
+                        if ("role".equals(attLocal)
+                                || attLocal.startsWith("aria-")) {
+                            err("The “" + attLocal
+                                    + "” attribute must"
+                                    + " not be used on a"
+                                    + " “button” element"
+                                    + " that is a child of a"
+                                    + " “select” element.");
+                        }
+                    }
+                }
+            }
+            if ("selectedcontent" == localName) {
+                boolean insideButtonInSelect = false;
+                for (int i = currentPtr; i >= 0; i--) {
+                    if (stack[i] == null) {
+                        continue;
+                    }
+                    if ("button".equals(stack[i].name)) {
+                        if (i > 0 && stack[i - 1] != null
+                                && "select".equals(
+                                        stack[i - 1].name)) {
+                            insideButtonInSelect = true;
+                        }
+                        break;
+                    }
+                }
+                if (insideButtonInSelect) {
+                    for (int i = 0; i < atts.getLength(); i++) {
+                        String attLocal = atts.getLocalName(i);
+                        if ("role".equals(attLocal)
+                                || attLocal.startsWith("aria-")) {
+                            err("The “" + attLocal + "” attribute"
+                                    + " must not be used on a"
+                                    + " “selectedcontent” element"
+                                    + " inside the “button” part"
+                                    + " of a customizable"
+                                    + " “select” element.");
+                        }
                     }
                 }
             }

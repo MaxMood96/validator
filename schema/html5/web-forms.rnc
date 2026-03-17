@@ -424,7 +424,9 @@ datatypes w = "http://whattf.org/datatype-draft"
 				string
 			}		
 	option.inner =
-		( text )
+		(	common.inner.phrasing
+		&	div.elem*
+		)
 
 ## Option Group: <optgroup>
 
@@ -432,7 +434,7 @@ datatypes w = "http://whattf.org/datatype-draft"
 		element optgroup { optgroup.inner & optgroup.attrs }
 	optgroup.attrs = 
 		(	common.attrs
-		&	optgroup.attrs.label
+		&	optgroup.attrs.label?
 		&	common-form.attrs.disabled?
 		&	(	common.attrs.aria.implicit.group
 			|	common.attrs.aria.role.group
@@ -443,7 +445,19 @@ datatypes w = "http://whattf.org/datatype-draft"
 				string
 			}
 	optgroup.inner =
+		(	legend.elem?
+		&	option.elem*
+		&	optgroupdiv.elem*
+		&	noscript.elem.flow*
+		&	common.elem.script-supporting*
+		)
+
+	optgroupdiv.elem =
+		element div { optgroupdiv.inner & div.attrs }
+	optgroupdiv.inner =
 		(	option.elem*
+		&	optgroupdiv.elem*
+		&	noscript.elem.flow*
 		&	common.elem.script-supporting*
 		)
 
@@ -473,14 +487,41 @@ datatypes w = "http://whattf.org/datatype-draft"
 				w:string "multiple" | w:string ""
 			}
 	select.inner =
+		(	button.elem?
+		&	optgroup.elem*
+		&	option.elem*
+		&	hr.elem*
+		&	selectdiv.elem*
+		&	noscript.elem.flow*
+		&	common.elem.script-supporting*
+		)
+
+	selectdiv.elem =
+		element div { selectdiv.inner & div.attrs }
+	selectdiv.inner =
 		(	optgroup.elem*
 		&	option.elem*
 		&	hr.elem*
+		&	selectdiv.elem*
+		&	noscript.elem.flow*
 		&	common.elem.script-supporting*
 		)
 
 	common.elem.phrasing |= select.elem
-	
+
+## Selected option content: <selectedcontent>
+
+	selectedcontent.elem =
+		element selectedcontent { selectedcontent.inner & selectedcontent.attrs }
+	selectedcontent.attrs =
+		(	common.attrs
+		&	common.attrs.aria?
+		)
+	selectedcontent.inner =
+		( empty )
+
+	common.elem.phrasing |= selectedcontent.elem
+
 ## Shared Definitions for Complex Button
 	
 	button.attrs.command =
