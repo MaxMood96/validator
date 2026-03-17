@@ -456,7 +456,6 @@ datatypes w = "http://whattf.org/datatype-draft"
 		element div { optgroupdiv.inner & div.attrs }
 	optgroupdiv.inner =
 		(	option.elem*
-		&	optgroupdiv.elem*
 		&	noscript.elem.flow*
 		&	common.elem.script-supporting*
 		)
@@ -502,7 +501,6 @@ datatypes w = "http://whattf.org/datatype-draft"
 		(	optgroup.elem*
 		&	option.elem*
 		&	hr.elem*
-		&	selectdiv.elem*
 		&	noscript.elem.flow*
 		&	common.elem.script-supporting*
 		)
