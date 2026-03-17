@@ -63,7 +63,7 @@ jobs:
           version="$(date +"%y.%-m.%-d") ($(git rev-parse --short ${{ github.sha }}))"
           stacksize_flag=""
           if [[ "${{ matrix.java }}" == "11" ]]; then
-            stacksize_flag="--stacksize=1024"
+            stacksize_flag="--stacksize=2048"
           fi
           python checker.py --version="$version" $stacksize_flag build
           python checker.py --version="$version" $stacksize_flag jar
