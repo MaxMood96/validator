@@ -410,6 +410,14 @@ public class CssCalc extends CssCheckableValue {
                 return val2.getLength();
             }
         }
+        if (computed_type == CssTypes.CSS_NUMBER) {
+            if (val1.getType() == CssTypes.CSS_NUMBER) {
+                return val1.getLength();
+            }
+            if (val2.getType() == CssTypes.CSS_NUMBER) {
+                return val2.getLength();
+            }
+        }
         throw new ClassCastException("unknown");
     }
 
