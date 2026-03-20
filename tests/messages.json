@@ -708,6 +708,8 @@
     "html/elements/audio/src/userinfo-username-contains-percent-encoded-novalid.html": "Bad value \u201chttp://%25DOMAIN:foobar@foodomain.com\u201d for attribute \u201csrc\u201d on element \u201caudio\u201d.",
     "html/elements/audio/src/userinfo-username-contains-pile-of-poo-novalid.html": "Bad value \u201chttp://\ud83d\udca9:foo@example.com\u201d for attribute \u201csrc\u201d on element \u201caudio\u201d.",
     "html/elements/audio/src/userinfo-username-non-alpha-novalid.html": "Bad value \u201chttp://foo.com:b@d/\u201d for attribute \u201csrc\u201d on element \u201caudio\u201d.",
+    "html/elements/autofocus/duplicate-same-dialog-novalid.html": "There must not be two elements with the same \"nearest ancestor autofocus scoping root element\" that both have the \u201cautofocus\u201d attribute specified.",
+    "html/elements/autofocus/duplicate-same-scope-novalid.html": "There must not be two elements with the same \"nearest ancestor autofocus scoping root element\" that both have the \u201cautofocus\u201d attribute specified.",
     "html/elements/autonomous-custom-element-with-is-novalid.html": "Autonomous custom elements must not specify the \u201cis\u201d attribute.",
     "html/elements/base/after-other-elements-novalid.html": "Element \u201cbase\u201d not allowed as child of \u201cbody\u201d in this context.",
     "html/elements/base/after-url-novalid.html": "Element \u201cbase\u201d not allowed as child of \u201cbody\u201d in this context.",

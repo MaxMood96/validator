@@ -1089,6 +1089,10 @@ public class Assertions extends Checker {
 
         private boolean legendFound = false;
 
+        private boolean savedAutofocus = false;
+
+        private boolean isAutofocusScopingRoot = false;
+
         private int consecutiveRbCount = 0;
 
         private Locator captionNestedInFigure;
@@ -1317,6 +1321,22 @@ public class Assertions extends Checker {
 
         public void setLegendFound() {
             this.legendFound = true;
+        }
+
+        public boolean getSavedAutofocus() {
+            return savedAutofocus;
+        }
+
+        public void setSavedAutofocus(boolean val) {
+            this.savedAutofocus = val;
+        }
+
+        public boolean isAutofocusScopingRoot() {
+            return isAutofocusScopingRoot;
+        }
+
+        public void setAutofocusScopingRoot() {
+            this.isAutofocusScopingRoot = true;
         }
 
         /**
@@ -1976,9 +1996,8 @@ public class Assertions extends Checker {
                             + "/ruby/markup.en.html#visual for more guidance.");
                 }
                 currentRubyPtr = -1;
-            } else if ("dialog" == localName
-                    || node.atts.getIndex("", "popover") > -1) {
-                hasAutofocus = false;
+            } else if (node.isAutofocusScopingRoot()) {
+                hasAutofocus = node.getSavedAutofocus();
             } else if ("optgroup" == localName
                     && !node.hasLegend()
                     && node.atts.getIndex("", "label") < 0) {
@@ -4839,6 +4858,12 @@ public class Assertions extends Checker {
                         && !"".equals(atts.getValue("", "aria-label"))) {
                     child.setHeadingFound();
                 }
+            }
+            if ("dialog" == localName
+                    || atts.getIndex("", "popover") > -1) {
+                child.setSavedAutofocus(hasAutofocus);
+                child.setAutofocusScopingRoot();
+                hasAutofocus = false;
             }
             if ("select" == localName) {
                 boolean hasSize = false;
