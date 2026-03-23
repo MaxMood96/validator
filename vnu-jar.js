@@ -29,7 +29,13 @@ module.exports = exported;
 if (require.main === module) {
     (async () => {
         try {
-            console.log(await vnu.check(process.argv.slice(2)));
+            const { resolveJava } = require('./vnu-java-downloader');
+            const javaCmd = await resolveJava();
+            const { spawn } = require('child_process');
+            const child = spawn(javaCmd,
+                ['-jar', vnuJar, ...process.argv.slice(2)],
+                { stdio: 'inherit' });
+            child.on('close', (code) => process.exit(code || 0));
         } catch (err) {
             console.error(err.message.trim());
             process.exit(1);
