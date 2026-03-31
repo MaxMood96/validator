@@ -31,6 +31,7 @@ import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 
 import org.htmlunit.csp.Policy;
+import org.htmlunit.csp.PolicyInOrigin;
 import org.htmlunit.csp.url.URI;
 import org.htmlunit.csp.url.URLWithScheme;
 
@@ -74,6 +75,8 @@ public class CspEnforcementChecker extends Checker {
     };
 
     private Locator locator;
+
+    private String documentUrl;
 
     private Policy httpPolicy;
 
@@ -146,6 +149,7 @@ public class CspEnforcementChecker extends Checker {
     @Override
     public void startDocument() throws SAXException {
         resources = new ArrayList<>();
+        documentUrl = null;
         httpPolicy = null;
         metaPolicy = null;
         collectingScriptContent = false;
@@ -173,6 +177,9 @@ public class CspEnforcementChecker extends Checker {
             return;
         }
 
+        if (documentUrl == null && locator != null && locator.getSystemId() != null) {
+            documentUrl = locator.getSystemId();
+        }
         // Check for CSP meta tag
         if ("meta".equals(localName)) {
             String httpEquiv = atts.getValue("", "http-equiv");
@@ -370,8 +377,22 @@ public class CspEnforcementChecker extends Checker {
 
     private boolean isAllowedByPolicy(Policy policy, ResourceInfo resource) {
         try {
+            // Use PolicyInOrigin when we have a document URL, so that
+            // 'self' and relative URLs are resolved correctly.
+            Optional<URLWithScheme> parsedDocUrl = parseDocumentUrl();
+            PolicyInOrigin policyInOrigin = parsedDocUrl.isPresent()
+                    ? new PolicyInOrigin(policy, parsedDocUrl.get())
+                    : null;
+
             switch (resource.type) {
                 case EXTERNAL_SCRIPT:
+                    if (policyInOrigin != null) {
+                        Optional<URLWithScheme> url = parseUrl(resource.src);
+                        if (url.isPresent()) {
+                            return policyInOrigin.allowsScriptFromSource(
+                                    url.get());
+                        }
+                    }
                     return policy.allowsExternalScript(
                             Optional.ofNullable(resource.nonce),
                             Optional.ofNullable(resource.integrity),
@@ -389,6 +410,13 @@ public class CspEnforcementChecker extends Checker {
                             Optional.ofNullable(resource.content));
 
                 case EXTERNAL_STYLE:
+                    if (policyInOrigin != null) {
+                        Optional<URLWithScheme> url = parseUrl(resource.src);
+                        if (url.isPresent()) {
+                            return policyInOrigin.allowsStyleFromSource(
+                                    url.get());
+                        }
+                    }
                     return policy.allowsExternalStyle(
                             Optional.ofNullable(resource.nonce),
                             parseUrl(resource.src), Optional.empty());
@@ -403,18 +431,46 @@ public class CspEnforcementChecker extends Checker {
                             Optional.ofNullable(resource.content));
 
                 case IMAGE:
+                    if (policyInOrigin != null) {
+                        Optional<URLWithScheme> url = parseUrl(resource.src);
+                        if (url.isPresent()) {
+                            return policyInOrigin.allowsImageFromSource(
+                                    url.get());
+                        }
+                    }
                     return policy.allowsImage(parseUrl(resource.src),
                             Optional.empty());
 
                 case FRAME:
+                    if (policyInOrigin != null) {
+                        Optional<URLWithScheme> url = parseUrl(resource.src);
+                        if (url.isPresent()) {
+                            return policyInOrigin.allowsFrameFromSource(
+                                    url.get());
+                        }
+                    }
                     return policy.allowsFrame(parseUrl(resource.src),
                             Optional.empty());
 
                 case OBJECT:
+                    if (policyInOrigin != null) {
+                        Optional<URLWithScheme> url = parseUrl(resource.src);
+                        if (url.isPresent()) {
+                            return policyInOrigin.allowsObjectFromSource(
+                                    url.get());
+                        }
+                    }
                     return policy.allowsObject(parseUrl(resource.src),
                             Optional.empty());
 
                 case MEDIA:
+                    if (policyInOrigin != null) {
+                        Optional<URLWithScheme> url = parseUrl(resource.src);
+                        if (url.isPresent()) {
+                            return policyInOrigin.allowsMediaFromSource(
+                                    url.get());
+                        }
+                    }
                     return policy.allowsMedia(parseUrl(resource.src),
                             Optional.empty());
 
@@ -427,14 +483,38 @@ public class CspEnforcementChecker extends Checker {
         }
     }
 
+    private Optional<URLWithScheme> parseDocumentUrl() {
+        if (documentUrl == null) {
+            return Optional.empty();
+        }
+        try {
+            Optional<URI> uri = URI.parseURI(documentUrl);
+            if (uri.isPresent()) {
+                return Optional.of(uri.get());
+            }
+        } catch (Exception e) {
+        }
+        return Optional.empty();
+    }
+
     private Optional<URLWithScheme> parseUrl(String url) {
         if (url == null || url.isEmpty()) {
             return Optional.empty();
         }
         try {
+            // Try parsing as absolute URL first
             Optional<URI> uri = URI.parseURI(url);
             if (uri.isPresent()) {
                 return Optional.of(uri.get());
+            }
+            // Resolve relative URLs against the document URL
+            if (documentUrl != null) {
+                java.net.URI base = java.net.URI.create(documentUrl);
+                java.net.URI resolved = base.resolve(url);
+                uri = URI.parseURI(resolved.toString());
+                if (uri.isPresent()) {
+                    return Optional.of(uri.get());
+                }
             }
             return Optional.empty();
         } catch (Exception e) {

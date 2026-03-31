@@ -86,6 +86,14 @@ public class CspEnforcementCheckerTest {
         testDefaultSrcFallback();
 
         System.out.println();
+        System.out.println("Testing 'self' with document origin...");
+        testSelfAllowsSameOriginScript();
+        testSelfAllowsSameOriginStylesheet();
+        testSelfAllowsSameOriginImage();
+        testSelfBlocksCrossOriginScript();
+        testSelfAllowsRelativeUrl();
+
+        System.out.println();
         System.out.println("Results: " + passed + " passed, " + failed + " failed");
         if (failed > 0) {
             System.exit(1);
@@ -213,11 +221,63 @@ public class CspEnforcementCheckerTest {
                 warnings, "Inline script violates");
     }
 
+    // 'self' origin tests
+
+    private static void testSelfAllowsSameOriginScript() throws Exception {
+        List<String> warnings = validateWithCspAndOrigin(
+                "default-src 'self'",
+                "https://example.com/page.html",
+                "<script src=\"https://example.com/script.js\"></script>");
+        assertTrue("Same-origin script allowed by 'self'", warnings.isEmpty());
+    }
+
+    private static void testSelfAllowsSameOriginStylesheet() throws Exception {
+        List<String> warnings = validateWithCspAndOrigin(
+                "default-src 'self'",
+                "https://example.com/page.html",
+                "<link rel=\"stylesheet\" href=\"https://example.com/style.css\">");
+        assertTrue("Same-origin stylesheet allowed by 'self'", warnings.isEmpty());
+    }
+
+    private static void testSelfAllowsSameOriginImage() throws Exception {
+        List<String> warnings = validateWithCspAndOrigin(
+                "default-src 'self'; img-src 'self'",
+                "https://example.com/page.html",
+                "<img src=\"https://example.com/logo.png\">");
+        assertTrue("Same-origin image allowed by 'self'", warnings.isEmpty());
+    }
+
+    private static void testSelfBlocksCrossOriginScript() throws Exception {
+        List<String> warnings = validateWithCspAndOrigin(
+                "default-src 'self'",
+                "https://example.com/page.html",
+                "<script src=\"https://evil.com/script.js\"></script>");
+        assertContains("Cross-origin script blocked by 'self'",
+                warnings, "script");
+    }
+
+    private static void testSelfAllowsRelativeUrl() throws Exception {
+        List<String> warnings = validateWithCspAndOrigin(
+                "default-src 'self'",
+                "https://example.com/page.html",
+                "<script src=\"/assets/js/app.js\"></script>");
+        assertTrue("Relative URL allowed by 'self'", warnings.isEmpty());
+    }
+
     // Test infrastructure
 
     private static class TestLocator implements Locator {
         private int line = 1;
         private int column = 1;
+        private String systemId;
+
+        TestLocator() {
+            this.systemId = "test.html";
+        }
+
+        TestLocator(String systemId) {
+            this.systemId = systemId;
+        }
 
         @Override
         public String getPublicId() {
@@ -226,7 +286,7 @@ public class CspEnforcementCheckerTest {
 
         @Override
         public String getSystemId() {
-            return "test.html";
+            return systemId;
         }
 
         @Override
@@ -308,6 +368,41 @@ public class CspEnforcementCheckerTest {
         checker.endElement(XHTML_NS, "html", "html");
 
         // End document triggers validation
+        checker.endDocument();
+
+        return errorHandler.getWarnings();
+    }
+
+    private static List<String> validateWithCspAndOrigin(String cspPolicy,
+            String origin, String bodyContent) throws SAXException {
+        CspEnforcementChecker checker = new CspEnforcementChecker();
+        TestErrorHandler errorHandler = new TestErrorHandler();
+        checker.setErrorHandler(errorHandler);
+
+        checker.setDocumentLocator(new TestLocator(origin));
+        checker.startDocument();
+
+        AttributesImpl htmlAtts = new AttributesImpl();
+        htmlAtts.addAttribute("", "lang", "lang", "CDATA", "en");
+        checker.startElement(XHTML_NS, "html", "html", htmlAtts);
+
+        checker.startElement(XHTML_NS, "head", "head", new AttributesImpl());
+
+        AttributesImpl metaAtts = new AttributesImpl();
+        metaAtts.addAttribute("", "http-equiv", "http-equiv", "CDATA",
+                "Content-Security-Policy");
+        metaAtts.addAttribute("", "content", "content", "CDATA", cspPolicy);
+        checker.startElement(XHTML_NS, "meta", "meta", metaAtts);
+        checker.endElement(XHTML_NS, "meta", "meta");
+
+        checker.endElement(XHTML_NS, "head", "head");
+
+        checker.startElement(XHTML_NS, "body", "body", new AttributesImpl());
+        parseBodyContent(checker, bodyContent);
+        checker.endElement(XHTML_NS, "body", "body");
+
+        checker.endElement(XHTML_NS, "html", "html");
+
         checker.endDocument();
 
         return errorHandler.getWarnings();
